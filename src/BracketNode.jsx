@@ -1,14 +1,51 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 import { createFlagTexture } from './flagTextures';
 
 export function BracketNode({ position, teamName, countryCode, rotationY }) {
+    const [hovered, setHovered] = useState(false);
+
     const flagTexture = useMemo(() => createFlagTexture(countryCode), [countryCode]);
 
-    useEffect(() => () => flagTexture.dispose(), [flagTexture]);
+    // Generate a soft, blurred circular gradient canvas texture for the box-shadow effect
+    const glowTexture = useMemo(() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+
+        // Create a radial gradient: white center fading out to total transparency
+        const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+        gradient.addColorStop(0, 'rgba(5, 255, 255, 1)');
+        gradient.addColorStop(0.2, 'rgba(5, 255, 255, 0.5)');
+        gradient.addColorStop(1, 'rgba(5, 255, 255, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 128, 128);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        return texture;
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            flagTexture.dispose();
+            glowTexture.dispose();
+        };
+    }, [flagTexture, glowTexture]);
 
     return (
-        <group position={position} rotation={[0, -rotationY, 0]}>
+        <group
+            position={position}
+            rotation={[0, -rotationY, 0]}
+            onPointerOver={(e) => {
+                e.stopPropagation();
+                setHovered(true);
+            }}
+            onPointerOut={() => setHovered(false)}
+        >
+            {/* Core Flag Sphere */}
             <mesh castShadow>
                 <sphereGeometry args={[0.38, 64, 32]} />
                 <meshStandardMaterial
@@ -18,10 +55,24 @@ export function BracketNode({ position, teamName, countryCode, rotationY }) {
                 />
             </mesh>
 
+            {/* Fading Box-Shadow Glow (Sprite stays facing the camera) */}
+            {hovered && (
+                <sprite scale={[1.4, 1.4, 1]}>
+                    <spriteMaterial
+                        map={glowTexture}
+                        color="#ffffff"
+                        transparent
+                        opacity={0.3}
+                        blending={THREE.AdditiveBlending}
+                        depthWrite={false} // Prevents box artifact outlines behind the sphere
+                    />
+                </sprite>
+            )}
+
             <Text
                 position={[0, -0.62, 0]}
                 fontSize={0.14}
-                color="white"
+                color={hovered ? "#ffffff" : "#cbd5e1"}
                 anchorX="center"
                 anchorY="middle"
                 outlineWidth={0.01}
