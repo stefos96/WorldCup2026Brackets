@@ -1,38 +1,18 @@
 // src/data.js
 
-const roundOf32Matches = [
-    [['South Africa', 'RSA'], ['Canada', 'CAN']],
-    [['Netherlands', 'NED'], ['Morocco', 'MAR']],
-    [['Germany', 'GER'], ['Paraguay', 'PAR']],
-    [['France', 'FRA'], ['Sweden', 'SWE']],
-    [['Brazil', 'BRA'], ['Japan', 'JPN']],
-    [['Ivory Coast', 'CIV'], ['Norway', 'NOR']],
-    [['Mexico', 'MEX'], ['Ecuador', 'ECU']],
-    [['England', 'ENG'], ['DR Congo', 'COD']],
-    [['Portugal', 'POR'], ['Croatia', 'CRO']],
-    [['Spain', 'ESP'], ['Austria', 'AUT']],
-    [['United States', 'USA'], ['Bosnia-Herzegovina', 'BIH']],
-    [['Belgium', 'BEL'], ['Senegal', 'SEN']],
-    [['Argentina', 'ARG'], ['Cape Verde', 'CPV']],
-    [['Australia', 'AUS'], ['Egypt', 'EGY']],
-    [['Switzerland', 'SUI'], ['Algeria', 'ALG']],
-    [['Colombia', 'COL'], ['Ghana', 'GHA']],
-];
-
+// Dynamic helper to create placeholder shapes for empty slots
 const createTbdRound = (prefix, length) =>
-    Array.from({ length }, (_, i) => ({ id: `${prefix}-${i}`, team: 'TBD', code: 'TBD', score: 0, isWinner: false }));
+    Array.from({ length }, (_, i) => ({
+        id: `${prefix}-tbd-${i}`,
+        team: 'TBD',
+        code: 'TBD',
+        score: 0,
+        isWinner: false
+    }));
 
+// Geometrically complete base structure used as an instant fallback
 export const initialBracketData = {
-    roundOf32: roundOf32Matches.flatMap((match, matchIndex) =>
-        match.map(([team, code], teamIndex) => ({
-            id: `r32-${matchIndex}-${teamIndex}`,
-            matchId: matchIndex + 1,
-            team,
-            code,
-            score: 0,
-            isWinner: false
-        })),
-    ),
+    roundOf32: createTbdRound('r32', 32),
     roundOf16: createTbdRound('r16', 16),
     quarterFinals: createTbdRound('qf', 8),
     semiFinals: createTbdRound('sf', 4),
@@ -41,73 +21,122 @@ export const initialBracketData = {
 
 export const fetchRealTimeBracket = async () => {
     try {
-        const response = await fetch('https://api.fifa.com/api/v3/calendar/17/285023/289273/standing?language=en&count=200');
-        if (!response.ok) throw new Error('FIFA API unreachable');
+        const response = await fetch('https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idCompetition=17&idSeason=285023');
+        if (!response.ok) throw new Error('FIFA Matches API unreachable');
         const data = await response.json();
 
         const updatedBracket = {
-            roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], finals: []
+            roundOf32: [],
+            roundOf16: [],
+            quarterFinals: [],
+            semiFinals: [],
+            finals: []
         };
 
-        // If the API structure has no results yet, fallback gracefully
         if (!data.Results || data.Results.length === 0) return initialBracketData;
 
-        // Loop through FIFA's standings list and allocate entries
-        data.Results.forEach((item, index) => {
-            const stageId = item.IdStage || "";
-            const teamName = item.Team?.Name[0]?.Description || "TBD";
-            const teamCode = item.Team?.Abbreviation || "TBD";
+        // 1. Process all matches dynamically and bucket them by stage description strings
+        data.Results.forEach((match) => {
+            // Read localized phase stage descriptions safely
+            const stageDesc = match.StageName?.[0]?.Description?.toLowerCase() || "";
 
-            const node = {
-                id: `fifa-${item.IdTeam || index}`,
-                matchId: Math.floor(index / 2) + 1,
-                team: teamName,
-                code: teamCode,
-                score: item.Played || 0, // Using games played or status markers as baseline indicators
-                isWinner: item.Position === 1 // If they hold the top rank slot in knockout groupings
-            };
+            // Extract core node info
+            const homeName = match.Home?.Name?.[0]?.Description || "TBD";
+            const homeCode = match.Home?.Abbreviation || "TBD";
+            const homeScore = match.HomeTeamScore ?? 0;
 
-            // Map standard FIFA tournament phase configurations to concentric rings
-            if (stageId.includes("32")) {
-                updatedBracket.roundOf32.push(node);
-            } else if (stageId.includes("16")) {
-                updatedBracket.roundOf16.push(node);
-            } else if (stageId.includes("quarter")) {
-                updatedBracket.quarterFinals.push(node);
-            } else if (stageId.includes("semi")) {
-                updatedBracket.semiFinals.push(node);
-            } else if (stageId.includes("final")) {
-                updatedBracket.finals.push(node);
+            const awayName = match.Away?.Name?.[0]?.Description || "TBD";
+            const awayCode = match.Away?.Abbreviation || "TBD";
+            const awayScore = match.AwayTeamScore ?? 0;
+
+            const winnerId = match.Winner;
+
+            const pair = [
+                {
+                    id: `live-${match.IdMatch}-0`,
+                    team: homeName,
+                    code: homeCode,
+                    score: homeScore,
+                    isWinner: winnerId === match.Home?.IdTeam || (match.MatchStatus === 3 && homeScore > awayScore)
+                },
+                {
+                    id: `live-${match.IdMatch}-1`,
+                    team: awayName,
+                    code: awayCode,
+                    score: awayScore,
+                    isWinner: winnerId === match.Away?.IdTeam || (match.MatchStatus === 3 && awayScore > homeScore)
+                }
+            ];
+
+            // Filter into target concentric structural tracks dynamically
+            if (stageDesc.includes('32') || stageDesc.includes('round of 32')) {
+                updatedBracket.roundOf32.push(...pair);
+            } else if (stageDesc.includes('16') || stageDesc.includes('round of 16')) {
+                updatedBracket.roundOf16.push(...pair);
+            } else if (stageDesc.includes('quarter')) {
+                updatedBracket.quarterFinals.push(...pair);
+            } else if (stageDesc.includes('semi')) {
+                updatedBracket.semiFinals.push(...pair);
+            } else if (stageDesc.includes('final') && !stageDesc.includes('third')) {
+                updatedBracket.finals.push(...pair);
             }
         });
 
-        // Smart Promotion: If Round of 32 has winners but next stages are empty, push them inward automatically
-        if (updatedBracket.roundOf16.length === 0 && updatedBracket.roundOf32.length > 0) {
-            for (let i = 0; i < updatedBracket.roundOf32.length; i += 2) {
-                const teamA = updatedBracket.roundOf32[i];
-                const teamB = updatedBracket.roundOf32[i + 1];
+        // 2. TREE LOGIC FALLBACK: If inner stages haven't generated matches yet,
+        // programmatically advance winners from previous tiers to keep the visual flow active
+        const promoteWinners = (currentRound, idealCount, prefix) => {
+            if (currentRound.length > 0) return currentRound; // Already populated by API data
 
-                if (teamA?.isWinner) {
-                    updatedBracket.roundOf16.push({ ...teamA, isWinner: false });
-                } else if (teamB?.isWinner) {
-                    updatedBracket.roundOf16.push({ ...teamB, isWinner: false });
-                } else {
-                    updatedBracket.roundOf16.push({ id: `r16-tbd-${i}`, team: 'TBD', code: 'TBD', score: 0, isWinner: false });
+            const dynamicPool = [];
+            const sourceRound = prefix === 'r16' ? updatedBracket.roundOf32 :
+                prefix === 'qf'  ? updatedBracket.roundOf16 :
+                    prefix === 'sf'  ? updatedBracket.quarterFinals : updatedBracket.semiFinals;
+
+            if (sourceRound && sourceRound.length > 0) {
+                for (let i = 0; i < sourceRound.length; i += 4) {
+                    if (dynamicPool.length >= idealCount) break;
+
+                    const m1_t1 = sourceRound[i];
+                    const m1_t2 = sourceRound[i + 1];
+                    const m2_t1 = sourceRound[i + 2];
+                    const m2_t2 = sourceRound[i + 3];
+
+                    let slot1 = { id: `${prefix}-tbd-${i}`, team: 'TBD', code: 'TBD', score: 0, isWinner: false };
+                    if (m1_t1?.isWinner) slot1 = { ...m1_t1, isWinner: false, score: 0 };
+                    else if (m1_t2?.isWinner) slot1 = { ...m1_t2, isWinner: false, score: 0 };
+
+                    let slot2 = { id: `${prefix}-tbd-${i+2}`, team: 'TBD', code: 'TBD', score: 0, isWinner: false };
+                    if (m2_t1?.isWinner) slot2 = { ...m2_t1, isWinner: false, score: 0 };
+                    else if (m2_t2?.isWinner) slot2 = { ...m2_t2, isWinner: false, score: 0 };
+
+                    dynamicPool.push(slot1, slot2);
                 }
             }
-        }
 
-        // Structural Fillers: Keep your rings matching the required shapes perfectly
-        if (updatedBracket.roundOf32.length === 0) updatedBracket.roundOf32 = initialBracketData.roundOf32;
-        if (updatedBracket.roundOf16.length === 0) updatedBracket.roundOf16 = createTbdRound('r16', 16);
-        if (updatedBracket.quarterFinals.length === 0) updatedBracket.quarterFinals = createTbdRound('qf', 8);
-        if (updatedBracket.semiFinals.length === 0) updatedBracket.semiFinals = createTbdRound('sf', 4);
-        if (updatedBracket.finals.length === 0) updatedBracket.finals = createTbdRound('f', 2);
+            // Fill remainder with empty placeholders to avoid rendering layout errors
+            while (dynamicPool.length < idealCount) {
+                dynamicPool.push({
+                    id: `${prefix}-empty-${dynamicPool.length}`,
+                    team: 'TBD',
+                    code: 'TBD',
+                    score: 0,
+                    isWinner: false
+                });
+            }
+            return dynamicPool;
+        };
+
+        // 3. Keep counts perfectly proportional for the 3D concentric ring layout
+        updatedBracket.roundOf32 = updatedBracket.roundOf32.length === 32 ? updatedBracket.roundOf32 : initialBracketData.roundOf32;
+        updatedBracket.roundOf16 = promoteWinners(updatedBracket.roundOf16, 16, 'r16');
+        updatedBracket.quarterFinals = promoteWinners(updatedBracket.quarterFinals, 8, 'qf');
+        updatedBracket.semiFinals = promoteWinners(updatedBracket.semiFinals, 4, 'sf');
+        updatedBracket.finals = promoteWinners(updatedBracket.finals, 2, 'f');
 
         return updatedBracket;
 
     } catch (error) {
-        console.error("FIFA parsing error, retaining fallback profile:", error);
+        console.error("Dynamic schedule fetch process encountered a problem:", error);
         return initialBracketData;
     }
 };
