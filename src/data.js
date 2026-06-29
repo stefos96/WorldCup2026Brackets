@@ -21,9 +21,16 @@ export const initialBracketData = {
 
 export const fetchRealTimeBracket = async () => {
     try {
-        const response = await fetch('https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idCompetition=17&idSeason=285023');
-        if (!response.ok) throw new Error('FIFA Matches API unreachable');
-        const data = await response.json();
+        // 1. Fetch both endpoints concurrently to optimize performance
+        const [standingsRes, matchesRes] = await Promise.all([
+            fetch('https://api.fifa.com/api/v3/calendar/17/285023/289273/standing?language=en&count=200'),
+            fetch('https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idCompetition=17&idSeason=285023')
+        ]);
+
+        if (!standingsRes.ok || !matchesRes.ok) throw new Error('FIFA APIs unreachable');
+
+        const standingsData = await standingsRes.json();
+        const matchesData = await matchesRes.json();
 
         const updatedBracket = {
             roundOf32: [],
@@ -33,38 +40,58 @@ export const fetchRealTimeBracket = async () => {
             finals: []
         };
 
-        if (!data.Results || data.Results.length === 0) return initialBracketData;
+        if (!matchesData.Results || matchesData.Results.length === 0) return initialBracketData;
 
-        // 1. Process all matches dynamically and bucket them by stage description strings
-        data.Results.forEach((match) => {
-            // Read localized phase stage descriptions safely
+        // 2. Build a dynamic, runtime registry map connecting IdTeam to Name/Abbreviation using standings
+        const globalTeamMetadata = new Map();
+        if (standingsData.Results && Array.isArray(standingsData.Results)) {
+            standingsData.Results.forEach((row) => {
+                const teamId = row.IdTeam;
+                if (teamId && row.Team && row.Team.Abbreviation) {
+                    globalTeamMetadata.set(teamId, {
+                        team: row.Team.ShortClubName || row.Team.Name?.[0]?.Description || "TBD",
+                        code: row.Team.Abbreviation || "TBD"
+                    });
+                }
+            });
+        }
+
+        // 3. Process all matches dynamically, querying our globalTeamMetadata fallback registry when properties missing
+        matchesData.Results.forEach((match) => {
             const stageDesc = match.StageName?.[0]?.Description?.toLowerCase() || "";
 
-            // Extract core node info
-            const homeName = match.Home?.Name?.[0]?.Description || "TBD";
-            const homeCode = match.Home?.Abbreviation || "TBD";
+            const homeId = match.Home?.IdTeam || match.HomeTeamId;
+            const awayId = match.Away?.IdTeam || match.AwayTeamId;
+
+            // Extract metadata from match objects with an explicit fallback to our dynamic map
+            const homeMeta = globalTeamMetadata.get(homeId) || {
+                team: match.Home?.ShortClubName || match.Home?.Name?.[0]?.Description || "TBD",
+                code: match.Home?.Abbreviation || "TBD"
+            };
+
+            const awayMeta = globalTeamMetadata.get(awayId) || {
+                team: match.Away?.ShortClubName || match.Away?.Name?.[0]?.Description || "TBD",
+                code: match.Away?.Abbreviation || "TBD"
+            };
+
             const homeScore = match.HomeTeamScore ?? 0;
-
-            const awayName = match.Away?.Name?.[0]?.Description || "TBD";
-            const awayCode = match.Away?.Abbreviation || "TBD";
             const awayScore = match.AwayTeamScore ?? 0;
-
             const winnerId = match.Winner;
 
             const pair = [
                 {
                     id: `live-${match.IdMatch}-0`,
-                    team: homeName,
-                    code: homeCode,
+                    team: homeMeta.team,
+                    code: homeMeta.code,
                     score: homeScore,
-                    isWinner: winnerId === match.Home?.IdTeam || (match.MatchStatus === 3 && homeScore > awayScore)
+                    isWinner: winnerId === homeId || (match.MatchStatus === 3 && homeScore > awayScore)
                 },
                 {
                     id: `live-${match.IdMatch}-1`,
-                    team: awayName,
-                    code: awayCode,
+                    team: awayMeta.team,
+                    code: awayMeta.code,
                     score: awayScore,
-                    isWinner: winnerId === match.Away?.IdTeam || (match.MatchStatus === 3 && awayScore > homeScore)
+                    isWinner: winnerId === awayId || (match.MatchStatus === 3 && awayScore > homeScore)
                 }
             ];
 
@@ -82,7 +109,7 @@ export const fetchRealTimeBracket = async () => {
             }
         });
 
-        // 2. TREE LOGIC FALLBACK: If inner stages haven't generated matches yet,
+        // 4. TREE LOGIC FALLBACK: If inner stages haven't generated matches yet,
         // programmatically advance winners from previous tiers to keep the visual flow active
         const promoteWinners = (currentRound, idealCount, prefix) => {
             if (currentRound.length > 0) return currentRound; // Already populated by API data
@@ -126,7 +153,7 @@ export const fetchRealTimeBracket = async () => {
             return dynamicPool;
         };
 
-        // 3. Keep counts perfectly proportional for the 3D concentric ring layout
+        // 5. Keep counts perfectly proportional for the 3D concentric ring layout
         updatedBracket.roundOf32 = updatedBracket.roundOf32.length === 32 ? updatedBracket.roundOf32 : initialBracketData.roundOf32;
         updatedBracket.roundOf16 = promoteWinners(updatedBracket.roundOf16, 16, 'r16');
         updatedBracket.quarterFinals = promoteWinners(updatedBracket.quarterFinals, 8, 'qf');
