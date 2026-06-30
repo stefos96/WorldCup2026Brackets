@@ -4,8 +4,8 @@ import { useFrame } from '@react-three/fiber';
 import { Text, Billboard } from '@react-three/drei';
 import { createFlagTexture } from './flagTextures';
 
-// 3D Fast, Tilted, Trail-Simulating Particle Engine
-function OrbitParticles({ count = 35, sphereRadius = 0.38 }) {
+// Sub-Component: Dynamic Particle Beam
+function LinkParticles({ count = 40, radius, angularStep }) {
     const meshRef = useRef();
 
     const dummy = useMemo(() => new THREE.Object3D(), []);
@@ -14,26 +14,20 @@ function OrbitParticles({ count = 35, sphereRadius = 0.38 }) {
     const movementDir = useMemo(() => new THREE.Vector3(), []);
     const quaternionMat = useMemo(() => new THREE.Quaternion(), []);
 
-    // Generate static initial random parameters for each particle
     const particleData = useMemo(() => {
         const data = [];
         for (let i = 0; i < count; i++) {
-            // Generate a completely randomized 3D tilt axis vector
-            const randomAxis = new THREE.Vector3(
-                Math.random() - 0.5,
-                Math.random() - 0.5,
-                Math.random() - 0.5
-            ).normalize();
-
+            const travelDirection = Math.random() > 0.5 ? 1 : -1;
             data.push({
-                angleOffset: Math.random() * Math.PI * 2,
-                speed: 5.0 + Math.random() * 4.0,             // Fast movement speed
-                radiusOffset: 0.05 + Math.random() * 0.15,    // Tighter orbital boundaries
-                yOffset: (Math.random() - 0.5) * 0.1,         // Slight local flight variation
-                scaleX: 0.005 + Math.random() * 0.006,        // Tiny width/thickness
-                scaleZ: 0.05 + Math.random() * 0.07,          // Stretched length to simulate a fast velocity streak/trail
-                axis: randomAxis,                             // Permanent fixed rotation plane
-                axisTiltAngle: Math.random() * Math.PI        // Static orientation angle for this axis
+                progressOffset: Math.random(),
+                speed: 4.5 + Math.random() * 2.0,
+                direction: travelDirection,
+                spreadX: (Math.random() - 0.5) * 0.18,
+                spreadY: (Math.random() - 0.5) * 0.18,
+                waveFrequency: 4 + Math.random() * 7,
+                waveAmplitude: 0.03 + Math.random() * 0.06,
+                scaleX: 0.001 + Math.random() * 0.004,
+                scaleZ: 0.01 + Math.random() * 0.07
             });
         }
         return data;
@@ -45,33 +39,50 @@ function OrbitParticles({ count = 35, sphereRadius = 0.38 }) {
         const time = state.clock.getElapsedTime();
 
         particleData.forEach((p, i) => {
-            // 1. Calculate active target angle cleanly advancing over time
-            const currentAngle = p.angleOffset + (time * p.speed);
-            const activeRadius = sphereRadius + p.radiusOffset;
+            // Compute percentage path interpolation between 0 and 1
+            let t = (p.progressOffset + (time * p.speed * 0.22)) % 1.0;
+            if (p.direction === -1) t = 1.0 - t;
 
-            // 2. Compute current position on a clean flat frame
+            // Step A: Interpolate target path linearly across the local rotation arc
+            const targetArcAngle = angularStep * t;
+
+            // Step B: Map clean trigonometric circle updates relative to local node orientation [0,0,0]
             currentPos.set(
-                Math.cos(currentAngle) * activeRadius,
-                p.yOffset,
-                Math.sin(currentAngle) * activeRadius
+                radius * Math.cos(targetArcAngle) - radius,
+                0,
+                radius * Math.sin(targetArcAngle)
             );
-            // Apply fixed tilt offset angle so the orbital plane stays rigid
-            currentPos.applyAxisAngle(p.axis, p.axisTiltAngle);
 
-            // 3. Compute fractional look-ahead position to properly align trail stretch vector
-            const lookAheadAngle = currentAngle + 0.01;
+            // Add dynamic turbulence to the beam
+            const arc = Math.sin(t * Math.PI) * Math.sin(time * 3 + i) * p.waveAmplitude;
+            currentPos.x += p.spreadX;
+            currentPos.y += p.spreadY + arc;
+            currentPos.z += Math.sin(t * p.waveFrequency) * p.waveAmplitude * 0.4;
+
+            // Look-ahead tracking setup for rotation orientation calculations
+            const deltaT = p.direction * 0.01;
+            let lookAheadT = THREE.MathUtils.clamp(t + deltaT, 0, 1);
+            const nextArcAngle = angularStep * lookAheadT;
+
             nextPos.set(
-                Math.cos(lookAheadAngle) * activeRadius,
-                p.yOffset,
-                Math.sin(lookAheadAngle) * activeRadius
+                radius * Math.cos(nextArcAngle) - radius,
+                0,
+                radius * Math.sin(nextArcAngle)
             );
-            nextPos.applyAxisAngle(p.axis, p.axisTiltAngle);
+            const nextArc = Math.sin(lookAheadT * Math.PI) * Math.sin(time * 3 + i) * p.waveAmplitude;
+            nextPos.x += p.spreadX;
+            nextPos.y += p.spreadY + nextArc;
+            nextPos.z += Math.sin(lookAheadT * p.waveFrequency) * p.waveAmplitude * 0.4;
 
-            // 4. Orient trail vector to stretch directly backwards from direction of travel
-            movementDir.subVectors(nextPos, currentPos).normalize();
+            // Align particle orientation matrices based on the movement direction
+            if (p.direction === 1) {
+                movementDir.subVectors(nextPos, currentPos).normalize();
+            } else {
+                movementDir.subVectors(currentPos, nextPos).normalize();
+            }
             quaternionMat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movementDir);
 
-            // 5. Build transform matrices
+            // Commit matrix steps down into Instanced WebGL Buffer
             dummy.position.copy(currentPos);
             dummy.quaternion.copy(quaternionMat);
             dummy.scale.set(p.scaleX, p.scaleX, p.scaleZ);
@@ -89,7 +100,7 @@ function OrbitParticles({ count = 35, sphereRadius = 0.38 }) {
             <meshStandardMaterial
                 color="#62fdff"
                 emissive="#62fdff"
-                emissiveIntensity={3.0} // Enhanced brightness brings out the glowing trail illusion
+                emissiveIntensity={3.5}
                 transparent
                 opacity={0.9}
                 blending={THREE.AdditiveBlending}
@@ -99,7 +110,7 @@ function OrbitParticles({ count = 35, sphereRadius = 0.38 }) {
     );
 }
 
-export function BracketNode({ position, teamName, countryCode, rotationY }) {
+export function BracketNode({ position, hasLink, angularStep, radius, teamName, countryCode, rotationY }) {
     const [hovered, setHovered] = useState(false);
 
     const flagTexture = useMemo(() => createFlagTexture(countryCode), [countryCode]);
@@ -109,15 +120,12 @@ export function BracketNode({ position, teamName, countryCode, rotationY }) {
         canvas.width = 128;
         canvas.height = 128;
         const ctx = canvas.getContext('2d');
-
         const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
         gradient.addColorStop(0, 'rgba(5, 255, 255, 1)');
         gradient.addColorStop(0.2, 'rgba(5, 255, 255, 0.5)');
         gradient.addColorStop(1, 'rgba(5, 255, 255, 0)');
-
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, 128, 128);
-
         return new THREE.CanvasTexture(canvas);
     }, []);
 
@@ -148,7 +156,7 @@ export function BracketNode({ position, teamName, countryCode, rotationY }) {
                 />
             </mesh>
 
-            {/* Fading Box-Shadow Glow & 3D Volumetric Particles */}
+            {/* Hover Effects Layout System */}
             {hovered && (
                 <>
                     <sprite scale={[1.4, 1.4, 1]}>
@@ -162,18 +170,15 @@ export function BracketNode({ position, teamName, countryCode, rotationY }) {
                         />
                     </sprite>
 
-                    <OrbitParticles count={25} sphereRadius={0.58} />
+                    {/* Localized particle beam engine */}
+                    {hasLink && (
+                        <LinkParticles count={55} radius={radius} angularStep={angularStep} />
+                    )}
                 </>
             )}
 
-            {/* Billboard Text always facing the reader */}
-            <Billboard
-                follow={true}
-                lockX={false}
-                lockY={false}
-                lockZ={false}
-                position={[0, -0.62, 0]}
-            >
+            {/* Billboard Text Element */}
+            <Billboard position={[0, -0.62, 0]}>
                 <Text
                     fontSize={0.14}
                     color={hovered ? "#ffffff" : "#cbd5e1"}

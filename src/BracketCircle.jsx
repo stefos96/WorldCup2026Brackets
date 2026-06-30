@@ -13,12 +13,10 @@ export function BracketCircle({ items, radius, nextRadius, sphereSize }) {
         return { angle, position: [x, 0, z] };
     };
 
-    // SPECIAL LOGIC FOR FINALS: Generate a single continuous circle that wraps around both ways
     const fullCirclePoints = useMemo(() => {
         if (count !== 2) return [];
         const points = [];
-        const segments = 64; // Higher segments make a perfectly smooth continuous ring
-
+        const segments = 64;
         for (let i = 0; i <= segments; i++) {
             const currentAngle = (i / segments) * Math.PI * 2;
             const x = radius * Math.cos(currentAngle);
@@ -30,15 +28,9 @@ export function BracketCircle({ items, radius, nextRadius, sphereSize }) {
 
     return (
         <group>
-            {/* 1. Condition: Render Full Ring for Finals, or standard match arcs for earlier rounds */}
+            {/* 1. Arc Grid Connection Background Lines */}
             {count === 2 ? (
-                <Line
-                    points={fullCirclePoints}
-                    color="#ffdf00" // Optional: Golden accent ring for the grand finals
-                    lineWidth={2.5}
-                    transparent
-                    opacity={0.7}
-                />
+                <Line points={fullCirclePoints} color="#ffdf00" lineWidth={2.5} transparent opacity={0.7} />
             ) : (
                 items.map((item, index) => {
                     if (index % 2 !== 0) return null;
@@ -46,13 +38,9 @@ export function BracketCircle({ items, radius, nextRadius, sphereSize }) {
                     const { angle: angleStart } = getNodePlacement(index);
                     let { angle: angleEnd } = getNodePlacement(index + 1);
 
-                    if (angleEnd < angleStart) {
-                        angleEnd += Math.PI * 2;
-                    }
-
+                    if (angleEnd < angleStart) angleEnd += Math.PI * 2;
                     const midAngle = (angleStart + angleEnd) / 2;
 
-                    // Match arc line tracking the radius perimeter path
                     const arcPoints = [];
                     const segments = 10;
                     for (let i = 0; i <= segments; i++) {
@@ -63,7 +51,6 @@ export function BracketCircle({ items, radius, nextRadius, sphereSize }) {
                         arcPoints.push(new THREE.Vector3(x, -0.05, z));
                     }
 
-                    // Inward progression line
                     const progressionPoints = [
                         new THREE.Vector3(radius * Math.cos(midAngle), -0.05, radius * Math.sin(midAngle)),
                         new THREE.Vector3(nextRadius * Math.cos(midAngle), -0.05, nextRadius * Math.sin(midAngle))
@@ -80,14 +67,29 @@ export function BracketCircle({ items, radius, nextRadius, sphereSize }) {
                 })
             )}
 
-            {/* 2. Bracket Nodes */}
+            {/* 2. Flag Sphere Match Nodes */}
             {items.map((item, index) => {
                 const { angle, position } = getNodePlacement(index);
+
+                // Determine matching pairing index
+                const opponentIndex = index % 2 === 0 ? index + 1 : index - 1;
+                const opponentItem = items[opponentIndex];
+
+                // Check text directly to check for active vs open entries
+                const isCurrentValid = item && item.team !== 'TBD' && item.team !== '';
+                const isOpponentValid = opponentItem && opponentItem.team !== 'TBD' && opponentItem.team !== '';
+
+                // Tell the node whether it needs to render a link and what angular step it should take
+                const hasLink = isCurrentValid && isOpponentValid;
+                const angularStep = ((opponentIndex / count) * Math.PI * 2) - angle;
 
                 return (
                     <BracketNode
                         key={item.id}
                         position={position}
+                        hasLink={hasLink}
+                        angularStep={angularStep}
+                        radius={radius}
                         rotationY={angle}
                         teamName={item.team}
                         countryCode={item.code}
