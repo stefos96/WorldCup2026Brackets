@@ -77,6 +77,40 @@ const fifaToIso2 = {
     WAL: 'gb-wls', // Wales
 };
 
+// Helper function to safely parse and check relative dates (Today/Tomorrow)
+function getRelativeDateLabel(dateString) {
+    const matchDate = new Date(dateString);
+    if (isNaN(matchDate)) return dateString;
+
+    let isToday = sameDay(matchDate, new Date());
+
+    // Using setDate + getDate to safely bypass any Daylight Saving Time anomalies
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    let isTomorrow = sameDay(matchDate, tomorrow);
+
+    if (isToday) {
+        // Pad the hours and minutes to always ensure 2 digits
+        const hours = String(matchDate.getHours()).padStart(2, '0');
+        const minutes = String(matchDate.getMinutes()).padStart(2, '0');
+        return `Today ${hours}:${minutes}`;
+    }
+    if (isTomorrow) {
+        // Pad the hours and minutes to always ensure 2 digits
+        const hours = String(matchDate.getHours()).padStart(2, '0');
+        const minutes = String(matchDate.getMinutes()).padStart(2, '0');
+        return `Tomorrow ${hours}:${minutes}`;
+    }
+
+    return dateString;
+}
+
+function sameDay(d1, d2) {
+    return d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+}
+
 function App() {
     const [bracketData, setBracketData] = useState(initialBracketData);
     const [upcomingMatches, setUpcomingMatches] = useState([]);
@@ -206,7 +240,7 @@ function App() {
                                         return (
                                             <div key={match.id} className={`popup-match-item ${isCompleted ? 'completed' : 'upcoming'} ${outcomeClass}`}>
                                                 <div className="match-meta">
-                                                    <span>{match.stage}</span> • <span className="match-date">{match.date}</span>
+                                                    <span>{match.stage}</span> • <span className="match-date">{getRelativeDateLabel(match.date)}</span>
                                                 </div>
                                                 <div className="match-teams-row">
                                                     <span className={`team-lbl ${match.home === selectedTeam ? 'highlight' : ''}`}>{match.home}</span>
@@ -237,11 +271,14 @@ function App() {
                             const homeIso = match.homeCode !== 'TBD' ? (fifaToIso2[match.homeCode.toUpperCase()] || match.homeCode.toLowerCase().substring(0, 2)) : null;
                             const awayIso = match.awayCode !== 'TBD' ? (fifaToIso2[match.awayCode.toUpperCase()] || match.awayCode.toLowerCase().substring(0, 2)) : null;
 
+                            // Determine relative label (Today, Tomorrow, or raw fallback string)
+                            const dateLabel = getRelativeDateLabel(match.date);
+
                             return (
                                 <div key={match.id} className="match-card">
                                     <div className="card-header">
                                         <span>{match.stage}</span>
-                                        <span className="date-highlight">{match.date}</span>
+                                        <span className={`date-highlight ${dateLabel.toLowerCase()}`}>{dateLabel}</span>
                                     </div>
                                     <div className="card-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
 
