@@ -232,19 +232,55 @@ function App() {
                 <div className="upcoming-matches-panel">
                     <h3>Upcoming Matches</h3>
                     <div className="matches-list">
-                        {upcomingMatches.map((match) => (
-                            <div key={match.id} className="match-card">
-                                <div className="card-header">
-                                    <span>{match.stage}</span>
-                                    <span className="date-highlight">{match.date}</span>
+                        {upcomingMatches.map((match) => {
+                            // Get ISO-2 codes for home and away flags
+                            const homeIso = match.homeCode !== 'TBD' ? (fifaToIso2[match.homeCode.toUpperCase()] || match.homeCode.toLowerCase().substring(0, 2)) : null;
+                            const awayIso = match.awayCode !== 'TBD' ? (fifaToIso2[match.awayCode.toUpperCase()] || match.awayCode.toLowerCase().substring(0, 2)) : null;
+
+                            return (
+                                <div key={match.id} className="match-card">
+                                    <div className="card-header">
+                                        <span>{match.stage}</span>
+                                        <span className="date-highlight">{match.date}</span>
+                                    </div>
+                                    <div className="card-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+
+                                        {/* Home Team Row Layout */}
+                                        <div className="team-row side-panel-team" style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+                                            {homeIso && (
+                                                <img
+                                                    src={`https://flagcdn.com/w40/${homeIso}.png`}
+                                                    alt=""
+                                                    style={{ width: '20px', height: 'auto', borderRadius: '2px', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
+                                                    onError={(e) => e.target.style.display = 'none'}
+                                                />
+                                            )}
+                                            <span className="team-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {match.homeCode !== 'TBD' ? match.home : 'TBD'}
+                                </span>
+                                        </div>
+
+                                        <span className="vs-divider" style={{ color: '#64748b', fontSize: '0.85rem' }}>vs</span>
+
+                                        {/* Away Team Row Layout */}
+                                        <div className="team-row side-panel-team" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flex: 1, textAlign: 'right' }}>
+                                <span className="team-name away" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {match.awayCode !== 'TBD' ? match.away : 'TBD'}
+                                </span>
+                                            {awayIso && (
+                                                <img
+                                                    src={`https://flagcdn.com/w40/${awayIso}.png`}
+                                                    alt=""
+                                                    style={{ width: '20px', height: 'auto', borderRadius: '2px', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
+                                                    onError={(e) => e.target.style.display = 'none'}
+                                                />
+                                            )}
+                                        </div>
+
+                                    </div>
                                 </div>
-                                <div className="card-body">
-                                    <span className="team-name">{match.homeCode !== 'TBD' ? match.home : 'TBD'}</span>
-                                    <span className="vs-divider">vs</span>
-                                    <span className="team-name away">{match.awayCode !== 'TBD' ? match.away : 'TBD'}</span>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
