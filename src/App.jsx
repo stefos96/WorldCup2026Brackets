@@ -1,4 +1,4 @@
-// src/App.jsx - FINALIZED (Stacked Structure with Cross-Fade & Upcoming Matches UI)
+// src/App.jsx
 
 import {Suspense, useEffect, useState, useRef} from 'react';
 import {Canvas, useThree} from '@react-three/fiber';
@@ -8,6 +8,8 @@ import {fetchRealTimeBracket, initialBracketData} from './data';
 import {Trophy} from "./Trophy.jsx";
 import {AnimatedBall} from "./AnimatedBall.jsx";
 import gsap from 'gsap';
+import './scss/app.scss';
+import {Logo} from "./Logo.jsx"; // Inject SCSS Stylesheets
 
 function CameraTarget() {
     const {camera} = useThree();
@@ -48,53 +50,28 @@ function App() {
     };
 
     return (
-        <div style={{width: '100vw', height: '100vh', backgroundColor: '#0b0f19', position: 'relative', overflow: 'hidden', fontFamily: 'sans-serif'}}>
+        <div className="app-container">
 
-            {/* UPCOMING MATCHES PANEL (CHRONOLOGICALLY SORTED) */}
+            <Logo />
+
+            {/* UPCOMING MATCHES PANEL */}
             {isDataLoaded && upcomingMatches.length > 0 && (
-                <div style={{
-                    position: 'absolute',
-                    top: '20px',
-                    right: '20px',
-                    width: '320px',
-                    maxHeight: 'calc(100vh - 40px)',
-                    backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                    backdropFilter: 'blur(12px)',
-                    webkitBackdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '16px',
-                    padding: '20px',
-                    color: '#ffffff',
-                    zIndex: 10,
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-                }}>
-                    <h3 style={{margin: '0 0 4px 0', fontSize: '1.1rem', letterSpacing: '0.5px', color: '#38bdf8', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px'}}>
-                        Upcoming Matches
-                    </h3>
+                <div className="upcoming-matches-panel">
+                    <h3>Upcoming Matches</h3>
 
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                    <div className="matches-list">
                         {upcomingMatches.map((match) => (
-                            <div key={match.id} style={{
-                                backgroundColor: 'rgba(255,255,255,0.04)',
-                                padding: '12px',
-                                borderRadius: '8px',
-                                borderLeft: '3px solid #38bdf8',
-                                fontSize: '0.85rem'
-                            }}>
-                                <div style={{fontSize: '0.75rem', color: '#94a3b8', marginBottom: '6px', display: 'flex', justifyContent: 'space-between'}}>
-                                    <span style={{fontWeight: '500'}}>{match.stage}</span>
-                                    <span style={{color: '#38bdf8'}}>{match.date}</span>
+                            <div key={match.id} className="match-card">
+                                <div className="card-header">
+                                    <span>{match.stage}</span>
+                                    <span className="date-highlight">{match.date}</span>
                                 </div>
-                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: '600'}}>
-                                    <span style={{maxWidth: '42%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}} title={match.home}>
+                                <div className="card-body">
+                                    <span className="team-name" title={match.home}>
                                         {match.homeCode !== 'TBD' ? match.home : 'TBD'}
                                     </span>
-                                    <span style={{color: '#64748b', fontSize: '0.75rem', margin: '0 4px'}}>vs</span>
-                                    <span style={{maxWidth: '42%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right'}} title={match.away}>
+                                    <span className="vs-divider">vs</span>
+                                    <span className="team-name away" title={match.away}>
                                         {match.awayCode !== 'TBD' ? match.away : 'TBD'}
                                     </span>
                                 </div>
@@ -105,12 +82,13 @@ function App() {
             )}
 
             {/* PHASE 1: MAIN BRACKET SCENE */}
-            <div style={{
-                width: '100%', height: '100%',
-                visibility: isDataLoaded ? 'visible' : 'hidden',
-                opacity: isDataLoaded ? 1 : 0,
-                transition: 'opacity 0.5s ease'
-            }}>
+            <div
+                className="bracket-scene-wrapper"
+                style={{
+                    visibility: isDataLoaded ? 'visible' : 'hidden',
+                    opacity: isDataLoaded ? 1 : 0
+                }}
+            >
                 <Canvas camera={{position: [0, 15, 20], fov: 50}}>
                     <CameraTarget/>
                     <ambientLight intensity={0.6}/>
@@ -133,18 +111,7 @@ function App() {
             </div>
 
             {/* PHASE 2: 3D Ball Loader Overlay */}
-            <div
-                ref={loaderRef}
-                style={{
-                    position: 'absolute',
-                    top: 0, left: 0,
-                    width: '100%', height: '100%',
-                    zIndex: 999,
-                    pointerEvents: 'auto',
-                    background: '#0b0f19',
-                    opacity: 1,
-                }}
-            >
+            <div ref={loaderRef} className="loader-overlay">
                 <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
                     <ambientLight intensity={0.7} />
                     <directionalLight position={[5, 5, 5]} intensity={1.5} />
