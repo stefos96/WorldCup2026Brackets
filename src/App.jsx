@@ -8,6 +8,7 @@ import gsap from 'gsap';
 import './scss/app.scss';
 import {Logo} from "./Logo.jsx";
 import {AnimatedBall} from "./AnimatedBall.jsx";
+import {PointsParticles} from "./PointsParticles.jsx";
 
 function CameraTarget() {
     const {camera} = useThree();
@@ -347,11 +348,27 @@ function App() {
                     opacity: isDataLoaded ? 1 : 0
                 }}
             >
-                <Canvas camera={{position: [0, 15, 20], fov: 50}}>
+                <Canvas camera={{position: [0, 15, 20], fov: 50}}
+                        gl={{ antialias: true, alpha: false }}>
                     <CameraTarget/>
-                    <ambientLight intensity={0.6}/>
-                    <directionalLight position={[10, 20, 10]} intensity={1.5} castShadow/>
-                    <pointLight position={[-10, -10, -10]} intensity={0.5}/>
+
+
+                    {/* 1. Dramatic Dark Atmosphere Background & Fog */}
+                    {/* Deep navy bleeding into deep slate matching world cup broadcast aesthetics */}
+                    <color attach="background" args={['#070a13']} />
+                    <fogExp2 attach="fog" args={['#070a13', 0.025]} />
+
+                    {/* 2. Layered Studio Lighting to create volumetric shadows */}
+                    <ambientLight intensity={0.2}/>
+                    {/* Main rim highlight light */}
+                    <directionalLight position={[10, 20, 10]} intensity={1.8} castShadow shadow-mapSize={[2048, 2048]}/>
+                    {/* Subtle cyan counter-light from bottom-left for depth contrast */}
+                    <pointLight position={[-15, -5, -10]} intensity={0.8} color="#1d4ed8"/>
+                    {/* Golden spotlight focusing down on the central Trophy */}
+                    <spotLight position={[0, 12, 0]} intensity={2.5} angle={0.6} penumbra={1} color="#f59e0b" castShadow />
+
+                    {/* 3. Volumetric Floating Dust Particles (Adds immediate massive visual depth) */}
+                    <PointsParticles count={250} />
 
                     <Suspense fallback={null}>
                         <group>
