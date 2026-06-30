@@ -28,9 +28,18 @@ export function Trophy() {
         <group>
             {/* 1. Dedicated point light to cast a rich golden bloom outwards */}
             <pointLight
-                position={[0, 5.5, 0]}
-                intensity={155}
-                distance={6}
+                position={[1, 5.5, 0]}
+                intensity={500}
+                distance={5}
+                color="#ffdf00"
+                castShadow
+                shadow-bias={-0.001}
+            />
+
+            <pointLight
+                position={[-2, 4.5, 0]}
+                intensity={200}
+                distance={5}
                 color="#ffdf00"
                 castShadow
                 shadow-bias={-0.001}
@@ -42,7 +51,7 @@ export function Trophy() {
                 angle={0.6}
                 penumbra={1}
                 intensity={515}
-                color="#ffffff"
+                color="#ffdf00"
                 target={scene}
             />
 

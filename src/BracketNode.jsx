@@ -39,27 +39,22 @@ function LinkParticles({ count = 40, radius, angularStep }) {
         const time = state.clock.getElapsedTime();
 
         particleData.forEach((p, i) => {
-            // Compute percentage path interpolation between 0 and 1
             let t = (p.progressOffset + (time * p.speed * 0.22)) % 1.0;
             if (p.direction === -1) t = 1.0 - t;
 
-            // Step A: Interpolate target path linearly across the local rotation arc
             const targetArcAngle = angularStep * t;
 
-            // Step B: Map clean trigonometric circle updates relative to local node orientation [0,0,0]
             currentPos.set(
                 radius * Math.cos(targetArcAngle) - radius,
                 0,
                 radius * Math.sin(targetArcAngle)
             );
 
-            // Add dynamic turbulence to the beam
             const arc = Math.sin(t * Math.PI) * Math.sin(time * 3 + i) * p.waveAmplitude;
             currentPos.x += p.spreadX;
             currentPos.y += p.spreadY + arc;
             currentPos.z += Math.sin(t * p.waveFrequency) * p.waveAmplitude * 0.4;
 
-            // Look-ahead tracking setup for rotation orientation calculations
             const deltaT = p.direction * 0.01;
             let lookAheadT = THREE.MathUtils.clamp(t + deltaT, 0, 1);
             const nextArcAngle = angularStep * lookAheadT;
@@ -74,7 +69,6 @@ function LinkParticles({ count = 40, radius, angularStep }) {
             nextPos.y += p.spreadY + nextArc;
             nextPos.z += Math.sin(lookAheadT * p.waveFrequency) * p.waveAmplitude * 0.4;
 
-            // Align particle orientation matrices based on the movement direction
             if (p.direction === 1) {
                 movementDir.subVectors(nextPos, currentPos).normalize();
             } else {
@@ -82,7 +76,6 @@ function LinkParticles({ count = 40, radius, angularStep }) {
             }
             quaternionMat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movementDir);
 
-            // Commit matrix steps down into Instanced WebGL Buffer
             dummy.position.copy(currentPos);
             dummy.quaternion.copy(quaternionMat);
             dummy.scale.set(p.scaleX, p.scaleX, p.scaleZ);
@@ -113,6 +106,9 @@ function LinkParticles({ count = 40, radius, angularStep }) {
 export function BracketNode({ position, hasLink, angularStep, radius, teamName, countryCode, rotationY, onClick }) {
     const [hovered, setHovered] = useState(false);
 
+    // Ref anchor specifically dedicated to spinning the inner flag sphere
+    const flagSphereRef = useRef();
+
     const flagTexture = useMemo(() => createFlagTexture(countryCode), [countryCode]);
 
     const glowTexture = useMemo(() => {
@@ -128,6 +124,16 @@ export function BracketNode({ position, hasLink, angularStep, radius, teamName, 
         ctx.fillRect(0, 0, 128, 128);
         return new THREE.CanvasTexture(canvas);
     }, []);
+
+    // Continuous planetary rotation loop
+    useFrame((state) => {
+        if (flagSphereRef.current) {
+            // Spin on local Y axis
+            flagSphereRef.current.rotation.y = state.clock.getElapsedTime() * 0.55;
+            // Constant crooked tilt on Z axis
+            flagSphereRef.current.rotation.z = 0.21;
+        }
+    });
 
     useEffect(() => {
         return () => {
@@ -148,12 +154,12 @@ export function BracketNode({ position, hasLink, angularStep, radius, teamName, 
             onClick={(e) => {
                 e.stopPropagation();
                 if (teamName !== 'TBD' && onClick) {
-                    onClick(teamName); // Pass country name back to parent
+                    onClick(teamName);
                 }
             }}
         >
-            {/* Core Flag Sphere */}
-            <mesh castShadow>
+            {/* Core Flag Sphere with Earth-like tilt mapping */}
+            <mesh ref={flagSphereRef} castShadow>
                 <sphereGeometry args={[0.38, 64, 32]} />
                 <meshStandardMaterial
                     map={flagTexture}

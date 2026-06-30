@@ -71,15 +71,12 @@ export function BracketCircle({ items, radius, nextRadius, sphereSize, onNodeCli
             {items.map((item, index) => {
                 const { angle, position } = getNodePlacement(index);
 
-                // Determine matching pairing index
                 const opponentIndex = index % 2 === 0 ? index + 1 : index - 1;
                 const opponentItem = items[opponentIndex];
 
-                // Check text directly to check for active vs open entries
                 const isCurrentValid = item && item.team !== 'TBD' && item.team !== '';
                 const isOpponentValid = opponentItem && opponentItem.team !== 'TBD' && opponentItem.team !== '';
 
-                // Tell the node whether it needs to render a link and what angular step it should take
                 const hasLink = isCurrentValid && isOpponentValid;
                 const angularStep = ((opponentIndex / count) * Math.PI * 2) - angle;
 
