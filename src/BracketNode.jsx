@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import * as THREE from 'three';
-import { Text } from '@react-three/drei';
+import { Text, Billboard } from '@react-three/drei';
 import { createFlagTexture } from './flagTextures';
 
 export function BracketNode({ position, teamName, countryCode, rotationY }) {
@@ -55,7 +55,7 @@ export function BracketNode({ position, teamName, countryCode, rotationY }) {
                 />
             </mesh>
 
-            {/* Fading Box-Shadow Glow (Sprite stays facing the camera) */}
+            {/* Fading Box-Shadow Glow (Sprite stays facing the camera natively) */}
             {hovered && (
                 <sprite scale={[1.4, 1.4, 1]}>
                     <spriteMaterial
@@ -69,17 +69,25 @@ export function BracketNode({ position, teamName, countryCode, rotationY }) {
                 </sprite>
             )}
 
-            <Text
-                position={[0, -0.62, 0]}
-                fontSize={0.14}
-                color={hovered ? "#ffffff" : "#cbd5e1"}
-                anchorX="center"
-                anchorY="middle"
-                outlineWidth={0.01}
-                outlineColor="#0b0f19"
+            {/* Billboard wrapper forces everything inside it to tracking-rotate to the camera */}
+            <Billboard
+                follow={true}
+                lockX={false}
+                lockY={false}
+                lockZ={false}
+                position={[0, -0.62, 0]} // Position handled at billboard root level
             >
-                {teamName}
-            </Text>
+                <Text
+                    fontSize={0.14}
+                    color={hovered ? "#ffffff" : "#cbd5e1"}
+                    anchorX="center"
+                    anchorY="middle"
+                    outlineWidth={0.01}
+                    outlineColor="#0b0f19"
+                >
+                    {teamName}
+                </Text>
+            </Billboard>
         </group>
     );
 }
