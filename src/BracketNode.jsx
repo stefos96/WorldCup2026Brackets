@@ -20,10 +20,10 @@ function LinkParticles({ count = 40, radius, angularStep }) {
             const travelDirection = Math.random() > 0.5 ? 1 : -1;
             data.push({
                 progressOffset: Math.random(),
-                speed: 4.5 + Math.random() * 2.0,
+                speed: 6.5 + Math.random() * 2.0,
                 direction: travelDirection,
-                spreadX: (Math.random() - 0.5) * 0.18,
-                spreadY: (Math.random() - 0.5) * 0.18,
+                spreadX: (Math.random() - 0.5) * 0.02,
+                spreadY: (Math.random() - 0.5) * 0.02,
                 waveFrequency: 4 + Math.random() * 7,
                 waveAmplitude: 0.03 + Math.random() * 0.06,
                 scaleX: 0.001 + Math.random() * 0.004,
