@@ -115,4 +115,129 @@ $bg-glass: rgba(15, 23, 42, 0.7);
       }
     }
   }
+
+/* Team Popup Styles */
+.team-popup-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(11, 15, 25, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.team-popup-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  color: #f8fafc;
+  animation: popupScaleUp 0.2s ease-out;
+}
+
+.popup-header {
+  padding: 16px 20px;
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #38bdf8;
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.75rem;
+    cursor: pointer;
+    line-height: 1;
+    &:hover { color: #f1f5f9; }
+  }
+}
+
+.popup-body {
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.popup-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.popup-match-item {
+  background: #111827;
+  border-left: 4px solid #64748b;
+  border-radius: 6px;
+  padding: 12px;
+
+  &.upcoming {
+    border-left-color: #38bdf8; /* Blue line for upcoming matches */
+  }
+
+  &.completed {
+    &.won {
+      border-left-color: #10b981; /* Clean green line for wins */
+    }
+    &.lost {
+      border-left-color: #ef4444; /* Clean red line for losses */
+    }
+  }
+}
+
+.match-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.match-teams-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+
+  .team-lbl {
+    flex: 1;
+    &.highlight {
+      color: #38bdf8;
+      font-weight: bold;
+    }
+    &:last-child {
+      text-align: right;
+    }
+  }
+
+  .match-score {
+    background: #1e293b;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.95rem;
+    min-width: 50px;
+    text-align: center;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+  }
+}
+
+@keyframes popupScaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
 }

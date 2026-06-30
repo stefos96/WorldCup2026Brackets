@@ -110,7 +110,7 @@ function LinkParticles({ count = 40, radius, angularStep }) {
     );
 }
 
-export function BracketNode({ position, hasLink, angularStep, radius, teamName, countryCode, rotationY }) {
+export function BracketNode({ position, hasLink, angularStep, radius, teamName, countryCode, rotationY, onClick }) {
     const [hovered, setHovered] = useState(false);
 
     const flagTexture = useMemo(() => createFlagTexture(countryCode), [countryCode]);
@@ -145,6 +145,12 @@ export function BracketNode({ position, hasLink, angularStep, radius, teamName, 
                 setHovered(true);
             }}
             onPointerOut={() => setHovered(false)}
+            onClick={(e) => {
+                e.stopPropagation();
+                if (teamName !== 'TBD' && onClick) {
+                    onClick(teamName); // Pass country name back to parent
+                }
+            }}
         >
             {/* Core Flag Sphere */}
             <mesh castShadow>

@@ -167,8 +167,32 @@ export const fetchRealTimeBracket = async () => {
         // Chronologically sort upcoming fixtures by date and hours
         const sortedUpcoming = upcomingMatches.sort((a, b) => a.rawDate - b.rawDate);
 
-        return { bracket: updatedBracket, upcomingMatches: sortedUpcoming.slice(0, 4) };
+        // NEW: Also map ALL sorted matches from the API so we can filter by team later
+        const allParsedMatches = sortedMatches.map(match => {
+            const homeId = match.Home?.IdTeam || match.HomeTeamId;
+            const awayId = match.Away?.IdTeam || match.AwayTeamId;
+            const homeMeta = globalTeamMetadata.get(homeId) || { team: match.Home?.ShortClubName || "TBD", code: match.Home?.Abbreviation || "TBD" };
+            const awayMeta = globalTeamMetadata.get(awayId) || { team: match.Away?.ShortClubName || "TBD", code: match.Away?.Abbreviation || "TBD" };
 
+            return {
+                id: match.IdMatch?.toString(),
+                stage: match.StageName?.[0]?.Description || "World Cup Match",
+                home: homeMeta.team,
+                away: awayMeta.team,
+                homeCode: homeMeta.code,
+                awayCode: awayMeta.code,
+                homeScore: match.HomeTeamScore,
+                awayScore: match.AwayTeamScore,
+                status: match.MatchStatus, // 3 usually means completed
+                date: match.Date ? new Date(match.Date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "TBD"
+            };
+        });
+
+        return {
+            bracket: updatedBracket,
+            upcomingMatches: sortedUpcoming.slice(0, 4),
+            allMatches: allParsedMatches // <-- Expose this to our React App
+        };
     } catch (error) {
         console.error("Dynamic tree process encountered a problem:", error);
         return { bracket: initialBracketData, upcomingMatches: [] };

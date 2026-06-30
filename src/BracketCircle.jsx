@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Line } from '@react-three/drei';
 import { BracketNode } from './BracketNode';
 
-export function BracketCircle({ items, radius, nextRadius, sphereSize }) {
+export function BracketCircle({ items, radius, nextRadius, sphereSize, onNodeClick }) {
     const count = items.length;
 
     const getNodePlacement = (index) => {
@@ -94,6 +94,7 @@ export function BracketCircle({ items, radius, nextRadius, sphereSize }) {
                         teamName={item.team}
                         countryCode={item.code}
                         size={sphereSize}
+                        onClick={onNodeClick}
                     />
                 );
             })}
