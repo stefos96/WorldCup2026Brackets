@@ -117,6 +117,8 @@ function App() {
     const [allMatches, setAllMatches] = useState([]); // Raw global matches registry
     const [isDataLoaded, setIsDataLoaded] = useState(false);
 
+    const [showMobileUpcoming, setShowMobileUpcoming] = useState(false);
+
     // UI Modal Popup State
     const [selectedTeam, setSelectedTeam] = useState(null);
 
@@ -159,6 +161,16 @@ function App() {
     return (
         <div className="app-container">
             <Logo />
+
+            {/* MOBILE TOGGLE BUTTON */}
+            {isDataLoaded && upcomingMatches.length > 0 && (
+                <button
+                    className="mobile-upcoming-toggle-btn"
+                    onClick={() => setShowMobileUpcoming(!showMobileUpcoming)}
+                >
+                    {showMobileUpcoming ? "Hide Upcoming Matches" : `Upcoming Matches (${upcomingMatches.length})`}
+                </button>
+            )}
 
             {/* POPUP MODAL COMPONENT */}
             {selectedTeam && (
@@ -263,8 +275,13 @@ function App() {
 
             {/* UPCOMING MATCHES SIDE PANEL */}
             {isDataLoaded && upcomingMatches.length > 0 && (
-                <div className="upcoming-matches-panel">
-                    <h3>Upcoming Matches</h3>
+                <div className={`upcoming-matches-panel ${showMobileUpcoming ? 'mobile-visible' : ''}`}>
+                    <div className="panel-header-row">
+                        <h3>Upcoming Matches</h3>
+                        {/* Optional close button for mobile convenience */}
+                        <button className="panel-close-btn" onClick={() => setShowMobileUpcoming(false)}>×</button>
+                    </div>
+
                     <div className="matches-list">
                         {upcomingMatches.map((match) => {
                             // Get ISO-2 codes for home and away flags

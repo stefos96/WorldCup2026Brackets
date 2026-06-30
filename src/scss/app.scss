@@ -239,4 +239,90 @@ $bg-glass: rgba(15, 23, 42, 0.7);
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+  /* --- Mobile Toggle Layout Styles --- */
+
+  // Hide the toggle button on desktop screens by default
+  .mobile-upcoming-toggle-btn {
+    display: none;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    color: #ffffff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+
+    &:active {
+      transform: translateX(50%) scale(0.95);
+    }
+  }
+
+  .panel-close-btn {
+    display: none; // Hidden on desktop
+  }
+
+  /* Media Query targeting devices under 768px wide */
+  @media (max-width: 767px) {
+    .mobile-upcoming-toggle-btn {
+      display: block; // Reveal button on mobile screens
+    }
+
+    .upcoming-matches-panel {
+      position: fixed;
+      top: 0;
+      right: -100%; // Tucked completely offscreen by default
+      width: 80%;
+      max-width: 340px;
+      height: 90vh;
+      margin-bottom: 10px;
+      margin-top: 10px;
+      z-index: 150;
+      background: rgba(15, 23, 42, 0.95); // Dark backing matching your theme
+      backdrop-filter: blur(10px);
+      box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 20px;
+      overflow-y: auto;
+
+      // Show panel when state updates class injection
+      &.mobile-visible {
+        right: 50%;
+        transform: translateX(50%);
+      }
+    }
+
+    .panel-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+
+      h3 {
+        margin: 0;
+      }
+    }
+
+    .panel-close-btn {
+      display: block;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.75rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 5px;
+
+      &:hover {
+        color: #ffffff;
+      }
+    }
+  }
 }
