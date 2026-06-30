@@ -1,5 +1,3 @@
-// src/data.js
-
 const createTbdRound = (prefix, length) =>
     Array.from({ length }, (_, i) => ({
         id: `${prefix}-tbd-${i}`,
@@ -17,6 +15,44 @@ export const initialBracketData = {
     finals: createTbdRound('f', 2),
 };
 
+/**
+ * Maps a FIFA Match Number to its structural pair index in your 32-slot array.
+ * This ensures that index 0/1 plays index 2/3 in the next round, and matches
+ * the official Left-vs-Right bracket flow.
+ */
+const getRoundOf32SlotIndex = (matchNumber) => {
+    const matchToSlotMap = {
+        // --- LEFT SIDE OF BRACKET ---
+        // Quadrant 1 (Feeds into Semi-Final 1)
+        74: 0,  // GER vs PAR -> Winner is R16 Slot 0
+        77: 1,  // FRA vs SWE -> Winner is R16 Slot 1 (Faces Slot 0 in M89)
+        73: 2,  // RSA vs CAN -> Winner is R16 Slot 2
+        75: 3,  // NED vs MAR -> Winner is R16 Slot 3 (Faces Slot 2 in M90)
+
+        // Quadrant 2 (Feeds into Semi-Final 1)
+        83: 4,  // POR vs CRO -> Winner is R16 Slot 4
+        84: 5,  // ESP vs AUT -> Winner is R16 Slot 5 (Faces Slot 4 in M93)
+        81: 6,  // USA vs BIH -> Winner is R16 Slot 6
+        82: 7,  // BEL vs SEN -> Winner is R16 Slot 7 (Faces Slot 6 in M94)
+
+        // --- RIGHT SIDE OF BRACKET ---
+        // Quadrant 3 (Feeds into Semi-Final 2)
+        76: 8,  // BRA vs JPN -> Winner is R16 Slot 8
+        78: 9,  // CIV vs NOR -> Winner is R16 Slot 9 (Faces Slot 8 in M91)
+        79: 10, // MEX vs ECU -> Winner is R16 Slot 10
+        80: 11, // ENG vs COD -> Winner is R16 Slot 11 (Faces Slot 10 in M92)
+
+        // Quadrant 4 (Feeds into Semi-Final 2)
+        86: 12, // ARG vs CPV -> Winner is R16 Slot 12
+        88: 13, // AUS vs EGY -> Winner is R16 Slot 13 (Faces Slot 12 in M95)
+        85: 14, // SUI vs ALG -> Winner is R16 Slot 14
+        87: 15  // COL vs GHA -> Winner is R16 Slot 15 (Faces Slot 14 in M96)
+    };
+
+    const relativeNum = matchNumber >= 73 ? matchNumber : (matchNumber + 72);
+    return matchToSlotMap[relativeNum] !== undefined ? matchToSlotMap[relativeNum] : null;
+};
+
 export const fetchRealTimeBracket = async () => {
     try {
         const [standingsRes, matchesRes] = await Promise.all([
@@ -29,7 +65,6 @@ export const fetchRealTimeBracket = async () => {
         const standingsData = await standingsRes.json();
         const matchesData = await matchesRes.json();
 
-        // 1. Initialize fixed structural slots
         const updatedBracket = {
             roundOf32: createTbdRound('r32', 32),
             roundOf16: createTbdRound('r16', 16),
@@ -42,7 +77,6 @@ export const fetchRealTimeBracket = async () => {
             return { bracket: initialBracketData, upcomingMatches: [] };
         }
 
-        // 2. Build global team metadata registry
         const globalTeamMetadata = new Map();
         if (standingsData.Results && Array.isArray(standingsData.Results)) {
             standingsData.Results.forEach((row) => {
@@ -56,23 +90,13 @@ export const fetchRealTimeBracket = async () => {
             });
         }
 
-        // 3. Sort base matches for bracket generation
-        const sortedMatches = matchesData.Results.sort((a, b) => {
-            const numA = a.MatchNumber || parseInt(a.IdMatch?.toString().slice(-4)) || 0;
-            const numB = b.MatchNumber || parseInt(b.IdMatch?.toString().slice(-4)) || 0;
-            return numA - numB;
-        });
-
-        // Setup time filtering boundary (End of today)
         const now = new Date();
-
         const upcomingMatches = [];
-        let r32Count = 0;
 
-        // 4. Populate the base initial round directly from API
-        sortedMatches.forEach((match) => {
+        matchesData.Results.forEach((match) => {
             const stageDesc = match.StageName?.[0]?.Description?.toLowerCase() || "";
             const matchIdStr = match.IdMatch?.toString() || "";
+            const matchNum = match.MatchNumber || parseInt(matchIdStr.slice(-4)) || 0;
 
             const homeId = match.Home?.IdTeam || match.HomeTeamId;
             const awayId = match.Away?.IdTeam || match.AwayTeamId;
@@ -106,7 +130,6 @@ export const fetchRealTimeBracket = async () => {
                 isWinner: winnerId === awayId || (match.MatchStatus === 3 && awayScore > homeScore)
             };
 
-            // Parse raw match date to ensure it occurs strictly after today
             const matchDate = match.Date ? new Date(match.Date) : null;
 
             if (match.MatchStatus === 1 && matchDate && matchDate > now) {
@@ -116,17 +139,19 @@ export const fetchRealTimeBracket = async () => {
                     away: awayMeta.team,
                     homeCode: homeMeta.code,
                     awayCode: awayMeta.code,
-                    rawDate: matchDate, // Keep date reference for chronological sorting
+                    rawDate: matchDate,
                     date: matchDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                     stage: match.StageName?.[0]?.Description || "World Cup Match"
                 });
             }
 
+            // --- FIXED PLACEMENT LOGIC ---
             if (stageDesc.includes('32') || stageDesc.includes('round of 32')) {
-                if (r32Count < 32) {
-                    updatedBracket.roundOf32[r32Count] = homeTeamObj;
-                    updatedBracket.roundOf32[r32Count + 1] = awayTeamObj;
-                    r32Count += 2;
+                const matchSlotPair = getRoundOf32SlotIndex(matchNum);
+                if (matchSlotPair !== null) {
+                    const arrayPosition = matchSlotPair * 2;
+                    updatedBracket.roundOf32[arrayPosition] = homeTeamObj;
+                    updatedBracket.roundOf32[arrayPosition + 1] = awayTeamObj;
                 }
             }
         });
@@ -164,11 +189,9 @@ export const fetchRealTimeBracket = async () => {
         propagateTree(updatedBracket.quarterFinals, updatedBracket.semiFinals, 'sf');
         propagateTree(updatedBracket.semiFinals, updatedBracket.finals, 'f');
 
-        // Chronologically sort upcoming fixtures by date and hours
         const sortedUpcoming = upcomingMatches.sort((a, b) => a.rawDate - b.rawDate);
 
-        // NEW: Also map ALL sorted matches from the API so we can filter by team later
-        const allParsedMatches = sortedMatches.map(match => {
+        const allParsedMatches = matchesData.Results.map(match => {
             const homeId = match.Home?.IdTeam || match.HomeTeamId;
             const awayId = match.Away?.IdTeam || match.AwayTeamId;
             const homeMeta = globalTeamMetadata.get(homeId) || { team: match.Home?.ShortClubName || "TBD", code: match.Home?.Abbreviation || "TBD" };
@@ -183,7 +206,7 @@ export const fetchRealTimeBracket = async () => {
                 awayCode: awayMeta.code,
                 homeScore: match.HomeTeamScore,
                 awayScore: match.AwayTeamScore,
-                status: match.MatchStatus, // 3 usually means completed
+                status: match.MatchStatus,
                 date: match.Date ? new Date(match.Date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "TBD"
             };
         });
@@ -191,7 +214,7 @@ export const fetchRealTimeBracket = async () => {
         return {
             bracket: updatedBracket,
             upcomingMatches: sortedUpcoming.slice(0, 4),
-            allMatches: allParsedMatches // <-- Expose this to our React App
+            allMatches: allParsedMatches
         };
     } catch (error) {
         console.error("Dynamic tree process encountered a problem:", error);
