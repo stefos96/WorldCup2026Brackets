@@ -38,7 +38,9 @@ export const fetchRealTimeBracket = async () => {
             finals: createTbdRound('f', 2)
         };
 
-        if (!matchesData.Results || matchesData.Results.length === 0) return initialBracketData;
+        if (!matchesData.Results || matchesData.Results.length === 0) {
+            return { bracket: initialBracketData, upcomingMatches: [] };
+        }
 
         // 2. Build global team metadata registry
         const globalTeamMetadata = new Map();
@@ -54,14 +56,17 @@ export const fetchRealTimeBracket = async () => {
             });
         }
 
-        // 3. Sort matches chronologically/by match number so they sit correctly side-by-side
+        // 3. Sort base matches for bracket generation
         const sortedMatches = matchesData.Results.sort((a, b) => {
             const numA = a.MatchNumber || parseInt(a.IdMatch?.toString().slice(-4)) || 0;
             const numB = b.MatchNumber || parseInt(b.IdMatch?.toString().slice(-4)) || 0;
             return numA - numB;
         });
 
-        // Track sequential entry counters only for the initial seeding round (Round of 32)
+        // Setup time filtering boundary (End of today)
+        const now = new Date();
+
+        const upcomingMatches = [];
         let r32Count = 0;
 
         // 4. Populate the base initial round directly from API
@@ -101,6 +106,22 @@ export const fetchRealTimeBracket = async () => {
                 isWinner: winnerId === awayId || (match.MatchStatus === 3 && awayScore > homeScore)
             };
 
+            // Parse raw match date to ensure it occurs strictly after today
+            const matchDate = match.Date ? new Date(match.Date) : null;
+
+            if (match.MatchStatus === 1 && matchDate && matchDate > now) {
+                upcomingMatches.push({
+                    id: matchIdStr,
+                    home: homeMeta.team,
+                    away: awayMeta.team,
+                    homeCode: homeMeta.code,
+                    awayCode: awayMeta.code,
+                    rawDate: matchDate, // Keep date reference for chronological sorting
+                    date: matchDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    stage: match.StageName?.[0]?.Description || "World Cup Match"
+                });
+            }
+
             if (stageDesc.includes('32') || stageDesc.includes('round of 32')) {
                 if (r32Count < 32) {
                     updatedBracket.roundOf32[r32Count] = homeTeamObj;
@@ -108,23 +129,18 @@ export const fetchRealTimeBracket = async () => {
                     r32Count += 2;
                 }
             }
-            // Real-time scores for higher rounds get overridden dynamically by tree arithmetic below
         });
 
         // 5. PURE MATHEMATICAL DYNAMIC PROGRESSION
-        // Calculates exactly where winners land next round based entirely on layout geometry
         const propagateTree = (sourceRound, targetRound, targetPrefix) => {
-            // Step through source array 4 items at a time (representing 2 matches feeding into 1 next match)
             for (let i = 0; i < sourceRound.length; i += 4) {
                 const match1_home = sourceRound[i];
                 const match1_away = sourceRound[i + 1];
                 const match2_home = sourceRound[i + 2];
                 const match2_away = sourceRound[i + 3];
 
-                // Target index in next array layout: every block of 4 maps to a block of 2
                 const targetIndex = (i / 4) * 2;
 
-                // Determine Match 1 Winner (Top slot in next match)
                 if (match1_home?.isWinner) {
                     targetRound[targetIndex] = { ...match1_home, isWinner: false, score: 0 };
                 } else if (match1_away?.isWinner) {
@@ -133,7 +149,6 @@ export const fetchRealTimeBracket = async () => {
                     targetRound[targetIndex] = { id: `${targetPrefix}-tbd-${targetIndex}`, team: 'TBD', code: 'TBD', score: 0, isWinner: false };
                 }
 
-                // Determine Match 2 Winner (Bottom slot in next match)
                 if (match2_home?.isWinner) {
                     targetRound[targetIndex + 1] = { ...match2_home, isWinner: false, score: 0 };
                 } else if (match2_away?.isWinner) {
@@ -144,16 +159,18 @@ export const fetchRealTimeBracket = async () => {
             }
         };
 
-        // Cascade calculations upwards through rounds mathematically
         propagateTree(updatedBracket.roundOf32, updatedBracket.roundOf16, 'r16');
         propagateTree(updatedBracket.roundOf16, updatedBracket.quarterFinals, 'qf');
         propagateTree(updatedBracket.quarterFinals, updatedBracket.semiFinals, 'sf');
         propagateTree(updatedBracket.semiFinals, updatedBracket.finals, 'f');
 
-        return updatedBracket;
+        // Chronologically sort upcoming fixtures by date and hours
+        const sortedUpcoming = upcomingMatches.sort((a, b) => a.rawDate - b.rawDate);
+
+        return { bracket: updatedBracket, upcomingMatches: sortedUpcoming.slice(0, 4) };
 
     } catch (error) {
         console.error("Dynamic tree process encountered a problem:", error);
-        return initialBracketData;
+        return { bracket: initialBracketData, upcomingMatches: [] };
     }
 };
