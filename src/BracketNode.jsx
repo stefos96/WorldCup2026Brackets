@@ -197,9 +197,10 @@ export function BracketNode({ position, hasLink, angularStep, radius, teamName, 
                     anchorX="center"
                     anchorY="middle"
                     outlineWidth={0.01}
+                    font="/fonts/WorldCup26.otf"
                     outlineColor="#0b0f19"
                 >
-                    {teamName}
+                    {teamName.toUpperCase()}
                 </Text>
             </Billboard>
         </group>
