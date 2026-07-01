@@ -310,7 +310,7 @@ function App() {
                                                     onError={(e) => e.target.style.display = 'none'}
                                                 />
                                             )}
-                                            <span className="team-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            <span className="team-name">
                                     {match.homeCode !== 'TBD' ? match.home : 'TBD'}
                                 </span>
                                         </div>
@@ -319,7 +319,7 @@ function App() {
 
                                         {/* Away Team Row Layout */}
                                         <div className="team-row side-panel-team" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flex: 1, textAlign: 'right' }}>
-                                <span className="team-name away" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <span className="team-name away">
                                     {match.awayCode !== 'TBD' ? match.away : 'TBD'}
                                 </span>
                                             {awayIso && (

@@ -93,7 +93,8 @@ $bg-glass: rgb(15 23 42 / 0.25);
         .team-name {
           overflow: hidden;
           text-overflow: ellipsis;
-          white-space: nowrap;
+          white-space: pre-wrap;
+          line-height: 1.2;
 
           &.away {
             text-align: right;
