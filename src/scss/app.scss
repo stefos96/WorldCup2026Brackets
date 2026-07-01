@@ -2,11 +2,12 @@
 
 // Design Tokens
 $bg-main: #0b0f19;
-$sky-blue: #38bdf8;
+$primary: #ffcca0;
+$win: #5bff8e;
 $text-muted: #94a3b8;
 $text-darker: #64748b;
 $border-glass: rgba(255, 255, 255, 0.1);
-$bg-glass: rgba(15, 23, 42, 0.7);
+$bg-glass: rgb(15 23 42 / 0.25);
 
 .app-container {
   width: 100vw;
@@ -42,11 +43,6 @@ $bg-glass: rgba(15, 23, 42, 0.7);
     right: 20px;
     width: 320px;
     max-height: calc(100vh - 40px);
-    background-color: $bg-glass;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid $border-glass;
-    border-radius: 16px;
     padding: 20px;
     color: #ffffff;
     z-index: 10;
@@ -54,15 +50,12 @@ $bg-glass: rgba(15, 23, 42, 0.7);
     display: flex;
     flex-direction: column;
     gap: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 
     h3 {
       margin: 0 0 4px 0;
       font-size: 1.1rem;
       letter-spacing: 0.5px;
-      color: $sky-blue;
-      border-bottom: 1px solid $border-glass;
-      padding-bottom: 8px;
+      color: $primary;
     }
 
     .matches-list {
@@ -75,8 +68,9 @@ $bg-glass: rgba(15, 23, 42, 0.7);
       background-color: rgba(255, 255, 255, 0.04);
       padding: 12px;
       border-radius: 8px;
-      border-left: 3px solid $sky-blue;
+      border-left: 3px solid $primary;
       font-size: 0.85rem;
+      cursor: pointer;
 
       .card-header {
         font-size: 0.75rem;
@@ -86,7 +80,7 @@ $bg-glass: rgba(15, 23, 42, 0.7);
         justify-content: space-between;
 
         .date-highlight {
-          color: $sky-blue;
+          color: $primary;
         }
       }
 
@@ -131,9 +125,9 @@ $bg-glass: rgba(15, 23, 42, 0.7);
 }
 
 .team-popup-card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
+  background: $bg-glass;
+  border: 1px solid $border-glass;
+  border-radius: 8px;
   width: 90%;
   max-width: 500px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
@@ -144,8 +138,8 @@ $bg-glass: rgba(15, 23, 42, 0.7);
 
 .popup-header {
   padding: 16px 20px;
-  background: #0f172a;
-  border-bottom: 1px solid #334155;
+  background: $bg-glass;
+  border-bottom: 1px solid $border-glass;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -153,7 +147,7 @@ $bg-glass: rgba(15, 23, 42, 0.7);
   h2 {
     margin: 0;
     font-size: 1.25rem;
-    color: #38bdf8;
+    color: white;
   }
 
   .close-btn {
@@ -181,12 +175,20 @@ $bg-glass: rgba(15, 23, 42, 0.7);
 
 .popup-match-item {
   background: #111827;
-  border-left: 4px solid #64748b;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-left: 4px solid #64748b;
+  transition: all 0.1s ease-in-out;
+  cursor: pointer;
+
+  &:hover {
+    border-left: 8px solid #64748b;
+}
 
   &.upcoming {
-    border-left-color: #38bdf8; /* Blue line for upcoming matches */
+    border-left-color: $primary; /* Blue line for upcoming matches */
   }
 
   &.completed {
@@ -214,7 +216,7 @@ $bg-glass: rgba(15, 23, 42, 0.7);
   .team-lbl {
     flex: 1;
     &.highlight {
-      color: #38bdf8;
+      color: $primary;
       font-weight: bold;
     }
     &:last-child {
@@ -249,7 +251,7 @@ $bg-glass: rgba(15, 23, 42, 0.7);
     top: 20px;
     right: 20px;
     z-index: 100;
-    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    background: linear-gradient(135deg, $primary, $bg-glass);
     color: #ffffff;
     border: none;
     padding: 12px 24px;
@@ -285,7 +287,7 @@ $bg-glass: rgba(15, 23, 42, 0.7);
       margin-bottom: 10px;
       margin-top: 10px;
       z-index: 150;
-      background: rgba(15, 23, 42, 0.95); // Dark backing matching your theme
+      background: $bg-main; // Dark backing matching your theme
       backdrop-filter: blur(10px);
       box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
       transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);

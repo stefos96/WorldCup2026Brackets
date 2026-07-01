@@ -169,7 +169,7 @@ function App() {
                     className="mobile-upcoming-toggle-btn"
                     onClick={() => setShowMobileUpcoming(!showMobileUpcoming)}
                 >
-                    {showMobileUpcoming ? "Hide Upcoming Matches" : `Upcoming Matches (${upcomingMatches.length})`}
+                    {showMobileUpcoming ? "Hide Upcoming Matches" : `Upcoming Matches`}
                 </button>
             )}
 
@@ -199,7 +199,7 @@ function App() {
                                         }}
                                     />
                                 )}
-                                {selectedTeam} Fixtures & Results
+                                {selectedTeam} Matches
                             </h2>
                             <button className="close-btn" onClick={() => setSelectedTeam(null)}>×</button>
                         </div>
