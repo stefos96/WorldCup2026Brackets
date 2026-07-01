@@ -115,8 +115,8 @@ export function BracketCircle({ items, allMatches = [], radius, nextRadius, sphe
                             hasPlayed = true;
                             // Keep score relative to how they are lined up on the circle
                             activeScoreText = realMatch.home === homeItem.team
-                                ? `${realMatch.homeScore}  -  ${realMatch.awayScore}`
-                                : `${realMatch.awayScore}  -  ${realMatch.homeScore}`;
+                                ? `${realMatch.awayScore}  -  ${realMatch.homeScore}`
+                                : `${realMatch.homeScore}  -  ${realMatch.awayScore}`;
                         }
                     }
 
