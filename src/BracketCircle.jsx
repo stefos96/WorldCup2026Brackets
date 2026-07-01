@@ -132,7 +132,7 @@ export function BracketCircle({ items, allMatches = [], radius, nextRadius, sphe
                                 <Billboard position={scorePosition}>
                                     <Text
                                         fontSize={0.2}
-                                        color="#62fdff"
+                                        color="#ffcca0"
                                         anchorX="center"
                                         anchorY="top"
                                         font="/fonts/WorldCup26.otf"
