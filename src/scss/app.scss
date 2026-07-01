@@ -71,6 +71,7 @@ $bg-glass: rgb(15 23 42 / 0.25);
       border-left: 3px solid $primary;
       font-size: 0.85rem;
       cursor: pointer;
+      backdrop-filter: blur(12px);
 
       .card-header {
         font-size: 0.75rem;
