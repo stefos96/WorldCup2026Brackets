@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { Line } from '@react-three/drei';
+import { Line, Text, Billboard } from '@react-three/drei';
 import { BracketNode } from './BracketNode';
 
-export function BracketCircle({ items, radius, nextRadius, sphereSize, onNodeClick }) {
+export function BracketCircle({ items, allMatches = [], radius, nextRadius, sphereSize, onNodeClick }) {
     const count = items.length;
 
     const getNodePlacement = (index) => {
@@ -28,18 +28,62 @@ export function BracketCircle({ items, radius, nextRadius, sphereSize, onNodeCli
 
     return (
         <group>
-            {/* 1. Arc Grid Connection Background Lines */}
+            {/* 1. Arc Grid Connection Background Lines & Floating Scores */}
             {count === 2 ? (
-                <Line points={fullCirclePoints} color="#ffdf00" lineWidth={2.5} transparent opacity={0.7} />
+                <>
+                    <Line points={fullCirclePoints} color="#ffdf00" lineWidth={2.5} transparent opacity={0.7} />
+
+                    {/* Finals Score Lookup */}
+                    {(() => {
+                        const homeItem = items[0];
+                        const awayItem = items[1];
+                        if (!homeItem || !awayItem || homeItem.team === 'TBD' || awayItem.team === 'TBD') return null;
+
+                        // Find match in global registry to verify if it has played
+                        const realMatch = allMatches.find(m =>
+                            (m.home === homeItem.team && m.away === awayItem.team) ||
+                            (m.home === awayItem.team && m.away === homeItem.team)
+                        );
+
+                        // Only show if status is completed (3) or scores are definitively registered
+                        const hasPlayed = realMatch && (realMatch.status === 3 || realMatch.homeScore !== null);
+
+                        if (!hasPlayed) return null;
+
+                        return (
+                            <Billboard position={[0, 0.4, radius * 0.8]}>
+                                <Text
+                                    fontSize={0.25}
+                                    color="#f59e0b"
+                                    anchorX="center"
+                                    anchorY="middle"
+                                    font="/fonts/WorldCup26.otf"
+                                    outlineWidth={0.02}
+                                    outlineColor="#070a13"
+                                >
+                                    {`${realMatch.homeScore} - ${realMatch.awayScore}`}
+                                </Text>
+                            </Billboard>
+                        );
+                    })()}
+                </>
             ) : (
                 items.map((item, index) => {
                     if (index % 2 !== 0) return null;
+
+                    const homeItem = item;
+                    const awayItem = items[index + 1];
 
                     const { angle: angleStart } = getNodePlacement(index);
                     let { angle: angleEnd } = getNodePlacement(index + 1);
 
                     if (angleEnd < angleStart) angleEnd += Math.PI * 2;
                     const midAngle = (angleStart + angleEnd) / 2;
+
+                    // Locate the exact middle of the connecting match arc
+                    const scoreX = radius * Math.cos(midAngle);
+                    const scoreZ = radius * Math.sin(midAngle);
+                    const scorePosition = [scoreX, 0.3, scoreZ];
 
                     const arcPoints = [];
                     const segments = 10;
@@ -56,11 +100,46 @@ export function BracketCircle({ items, radius, nextRadius, sphereSize, onNodeCli
                         new THREE.Vector3(nextRadius * Math.cos(midAngle), -0.05, nextRadius * Math.sin(midAngle))
                     ];
 
+                    // Cross-reference with the live match list to see if this pairing has actually played yet
+                    let hasPlayed = false;
+                    let activeScoreText = "";
+
+                    if (homeItem && awayItem && homeItem.team !== 'TBD' && awayItem.team !== 'TBD') {
+                        const realMatch = allMatches.find(m =>
+                            (m.home === homeItem.team && m.away === awayItem.team) ||
+                            (m.home === awayItem.team && m.away === homeItem.team)
+                        );
+
+                        // Using your exact popup modal evaluation rules: status 3 or non-null scores
+                        if (realMatch && (realMatch.status === 3 || realMatch.homeScore !== null)) {
+                            hasPlayed = true;
+                            // Keep score relative to how they are lined up on the circle
+                            activeScoreText = realMatch.home === homeItem.team
+                                ? `${realMatch.homeScore}  -  ${realMatch.awayScore}`
+                                : `${realMatch.awayScore}  -  ${realMatch.homeScore}`;
+                        }
+                    }
+
                     return (
                         <group key={`lines-${item.id}`}>
                             <Line points={arcPoints} color="#475569" lineWidth={2} transparent opacity={0.5} />
                             {nextRadius > 0 && (
                                 <Line points={progressionPoints} color="#475569" lineWidth={2} transparent opacity={0.5} />
+                            )}
+
+                            {/* Displays nothing if the match is scheduled but unplayed */}
+                            {hasPlayed && (
+                                <Billboard position={scorePosition}>
+                                    <Text
+                                        fontSize={0.2}
+                                        color="#62fdff"
+                                        anchorX="center"
+                                        anchorY="top"
+                                        font="/fonts/WorldCup26.otf"
+                                    >
+                                        {activeScoreText}
+                                    </Text>
+                                </Billboard>
                             )}
                         </group>
                     );

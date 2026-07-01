@@ -374,7 +374,8 @@ function App() {
                         <group>
                             <group position={[0, 0, 0]}><Trophy/></group>
                             {/* Injected setSelectedTeam handler across the round nodes */}
-                            <group rotation={[0, 0, 0]}><BracketCircle items={bracketData.roundOf32} radius={10} nextRadius={7.5} sphereSize={0.4} onNodeClick={setSelectedTeam}/></group>
+                            <group rotation={[0, 0, 0]}>
+                                <BracketCircle items={bracketData.roundOf32} radius={10} nextRadius={7.5} sphereSize={0.4} onNodeClick={setSelectedTeam} allMatches={allMatches}/></group>
                             <group rotation={[0, Math.PI / .5077, 0]}><BracketCircle items={bracketData.roundOf16} radius={7.5} nextRadius={5} sphereSize={0.45} onNodeClick={setSelectedTeam}/></group>
                             <group rotation={[0, Math.PI / 1.52, 0]}><BracketCircle items={bracketData.quarterFinals} radius={5} nextRadius={3} sphereSize={0.5} onNodeClick={setSelectedTeam}/></group>
                             <group rotation={[0, Math.PI / 1.88, 0]}><BracketCircle items={bracketData.semiFinals} radius={3} nextRadius={1.2} sphereSize={0.55} onNodeClick={setSelectedTeam}/></group>
